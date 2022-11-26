@@ -34,4 +34,5 @@ for strike in df.Strike.unique():
                                  (df['CallPut'] == 'P')]])
 
 df_transformed.to_csv(os.path.join(sys.path[0], 'AMZN_OPTIONS_XFM.csv'),
-                      index=False)
+                      index=False,
+                      header=None)
