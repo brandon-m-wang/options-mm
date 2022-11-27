@@ -1,3 +1,4 @@
+#include "../utils/utils.h"
 #include <chrono>
 #include <fcntl.h>
 #include <filesystem>
@@ -14,7 +15,26 @@
 
 using namespace std;
 
-vector<string> tick_from_stream(char *buf) { return {}; }
+vector<string> tick_from_stream(char *buf) {
+    vector<string> tick;
+
+    char delimiter[2] = ",";
+    char *token = strtok(buf, delimiter);
+
+    while (token != NULL) {
+        tick.push_back(token);
+        token = strtok(NULL, delimiter);
+    }
+
+    return tick;
+}
+
+void process(vector<string> tick) {
+    for (string attribute : tick) {
+        cout << attribute << " ";
+    }
+    cout << endl;
+}
 
 int main() {
     int fd;
@@ -28,6 +48,7 @@ int main() {
     mkfifo(myfifo, 0644);
 
     char buf[1028];
+    vector<string> tick;
     while (1) {
 
         // Open FIFO for Read only
@@ -36,10 +57,9 @@ int main() {
         // Read from FIFO
         read(fd, buf, sizeof(buf));
 
-        cout << strlen(buf) << " ";
+        tick = tick_from_stream(buf);
 
-        // Print the read message
-        cout << buf << endl;
+        process(tick);
     }
     close(fd);
 

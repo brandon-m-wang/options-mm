@@ -1,6 +1,7 @@
-enum class Options {
-    TimeBarStart,
+namespace Options {
+enum {
     Ticker,
+    TimeBarStart,
     CallPut,
     Strike,
     HighBidPrice,
@@ -17,8 +18,10 @@ enum class Options {
     LowTradeSize,
     Volume
 };
+}
 
-enum class Stock {
+namespace Stock {
+enum {
     Ticker,
     TimeBarStart,
     HighTradePrice,
@@ -27,3 +30,4 @@ enum class Stock {
     LowTradeSize,
     Volume
 };
+}
