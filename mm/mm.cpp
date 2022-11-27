@@ -11,9 +11,49 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
+#include <unordered_map>
 #include <vector>
 
 using namespace std;
+
+class MarketMaker {
+  public:
+    options_map options;
+    double equity;
+    double pnl;
+    double unrealized_gains;
+    double unrealized_losses;
+    double permanent_gains;
+    double permanent_losses;
+    int trades;
+
+    MarketMaker(double equity) {
+        this->equity = equity;
+        this->pnl = this->unrealized_gains = this->unrealized_losses =
+            this->permanent_gains = this->permanent_losses = 0;
+    }
+
+    void setOption(string ticker, string expiration, char type, double strike,
+                   double *bid_asks) {
+        options[ticker][expiration][strike] = bid_asks;
+    }
+
+    bool removeOption(string ticker, string expiration, double strike) {
+        if (options.count(ticker) == 0 ||
+            options[ticker].count(expiration) == 0 ||
+            options[ticker][expiration].count(strike) == 0) {
+            return false;
+        }
+        options[ticker][expiration].erase(strike);
+        if (options[ticker][expiration].size() == 0) {
+            options[ticker].erase(expiration);
+        }
+        if (options[ticker].size() == 0) {
+            options[ticker].erase(expiration);
+        }
+        return true;
+    }
+};
 
 vector<string> tick_from_stream(char *buf) {
     vector<string> tick;
