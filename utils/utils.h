@@ -7,16 +7,17 @@ enum {
     TimeBarStart,
     CallPut,
     Strike,
+    ExpirationDate,
     HighBidPrice,
     HighBidSize,
-    HighAskPrice,
-    HighAskSize,
-    HighTradePrice,
-    HighTradeSize,
     LowBidPrice,
     LowBidSize,
+    HighAskPrice,
+    HighAskSize,
     LowAskPrice,
     LowAskSize,
+    HighTradePrice,
+    HighTradeSize,
     LowTradePrice,
     LowTradeSize,
     Volume
@@ -35,6 +36,9 @@ enum {
 };
 }
 
-typedef std::unordered_map<double, double *> strike_to_prices;
-typedef std::unordered_map<std::string, strike_to_prices> expiration_to_strike;
-typedef std::unordered_map<std::string, expiration_to_strike> options_map;
+typedef std::unordered_map<std::string, double> price_volume;
+typedef std::unordered_map<double, price_volume> strike_to_price_volume;
+typedef std::unordered_map<std::string, strike_to_price_volume>
+    expiration_to_strike;
+typedef std::unordered_map<char, expiration_to_strike> call_put_to_expiration;
+typedef std::unordered_map<std::string, call_put_to_expiration> options_map;

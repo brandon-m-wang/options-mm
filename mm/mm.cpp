@@ -33,23 +33,47 @@ class MarketMaker {
             this->permanent_gains = this->permanent_losses = 0;
     }
 
-    void setOption(string ticker, string expiration, char type, double strike,
-                   double *bid_asks) {
-        options[ticker][expiration][strike] = bid_asks;
+    void printOptions() {
+        for (auto const &[ticker, callPutToExpiration] : this->options) {
+            cout << ticker << endl;
+            for (auto const &[callPut, expirationToStrike] :
+                 callPutToExpiration) {
+                cout << "\t" << callPut << endl;
+                for (auto const &[expiration, strikeToPriceVolume] :
+                     expirationToStrike) {
+                    cout << "\t\t" << expiration << endl;
+                    for (auto const &[strike, price_volume] :
+                         strikeToPriceVolume) {
+                        cout << "\t\t\t" << strike << endl;
+                        for (auto const &[key, value] : price_volume) {
+                            cout << "\t\t\t\t" << key << ": " << value << endl;
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    bool removeOption(string ticker, string expiration, double strike) {
-        if (options.count(ticker) == 0 ||
-            options[ticker].count(expiration) == 0 ||
-            options[ticker][expiration].count(strike) == 0) {
+    void setOption(string ticker, char callPut, string expiration,
+                   double strike, double bid, double ask, double volume) {
+        this->options[ticker][callPut][expiration][strike]["bid"] = bid;
+        this->options[ticker][callPut][expiration][strike]["ask"] = ask;
+        this->options[ticker][callPut][expiration][strike]["volume"] = volume;
+    }
+
+    bool removeOption(string ticker, char callPut, string expiration,
+                      double strike) {
+        if (options.count(ticker) == 0 || options[ticker].count(callPut) == 0 ||
+            options[ticker][callPut].count(expiration) == 0 ||
+            options[ticker][callPut][expiration].count(strike) == 0) {
             return false;
         }
-        options[ticker][expiration].erase(strike);
-        if (options[ticker][expiration].size() == 0) {
-            options[ticker].erase(expiration);
+        options[ticker][callPut][expiration].erase(strike);
+        if (options[ticker][callPut][expiration].size() == 0) {
+            options[ticker][callPut].erase(expiration);
         }
-        if (options[ticker].size() == 0) {
-            options[ticker].erase(expiration);
+        if (options[ticker][callPut].size() == 0) {
+            options[ticker].erase(callPut);
         }
         return true;
     }
@@ -69,14 +93,27 @@ vector<string> tick_from_stream(char *buf) {
     return tick;
 }
 
-void process(vector<string> tick) {
+void process(vector<string> tick, MarketMaker *mm) {
     for (string attribute : tick) {
         cout << attribute << " ";
     }
+
+    mm->setOption(tick[Options::Ticker], tick[Options::CallPut].front(),
+                  tick[Options::ExpirationDate], stod(tick[Options::Strike]),
+                  stod(tick[Options::LowBidPrice]),
+                  stod(tick[Options::LowAskPrice]), 10);
+
+    cout << endl;
+
+    mm->printOptions();
+
     cout << endl;
 }
 
 int main() {
+
+    MarketMaker *mm = new MarketMaker(100000);
+
     int fd;
 
     // FIFO file path
@@ -89,17 +126,16 @@ int main() {
 
     char buf[1028];
     vector<string> tick;
+    // Open FIFO for Read only
+    fd = open(myfifo, O_RDONLY);
     while (1) {
-
-        // Open FIFO for Read only
-        fd = open(myfifo, O_RDONLY);
 
         // Read from FIFO
         read(fd, buf, sizeof(buf));
 
         tick = tick_from_stream(buf);
 
-        process(tick);
+        process(tick, mm);
     }
     close(fd);
 
