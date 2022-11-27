@@ -1,9 +1,15 @@
 #include <chrono>
+#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <stdio.h>
+#include <string.h>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <thread>
+#include <unistd.h>
 #include <vector>
 
 using namespace std;
@@ -13,18 +19,26 @@ int main() {
     filesystem::path ifpath =
         filesystem::current_path() / "data-sources/AMZN_OPTIONS_XFM.csv";
     filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
+    const char *myfifo = ofpath.c_str();
 
     vector<string> row;
     string line;
 
-    fstream ifile(ifpath, ios::in);
-    fstream ofile(ofpath, ios::out);
+    mkfifo(myfifo, 0644);
+    int fd;
 
-    if (ifile.is_open() && ofile.is_open()) {
+    fstream ifile(ifpath, ios::in);
+
+    if (ifile.is_open()) {
         while (getline(ifile, line)) {
-            this_thread::sleep_for(chrono::milliseconds(3000));
-            ofile.write(line.c_str(), line.size()) << endl;
+            this_thread::sleep_for(chrono::milliseconds(100));
+
+            // Now open in write mode and write
+            // string taken from user.
+            fd = open(myfifo, O_WRONLY);
+            write(fd, line.c_str(), strlen(line.c_str()) + 1);
         }
+        close(fd);
     }
 
     return 0;
