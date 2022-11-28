@@ -4,7 +4,7 @@ import pandas as pd
 df = pd.read_csv(os.path.join(sys.path[0], 'AMZN_OPTIONS.csv'), 
                  index_col=False)
 
-f = open(os.path.join(os.path.dirname(sys.path[0]), 'mm/STRIKE_PRICES'), 'w')
+f = open(os.path.join(os.path.dirname(sys.path[0]), 'mm/TRADED_OPTIONS'), 'w')
 
 for ticker in df.Ticker.unique():
     for strike in df[(df['Ticker'] == ticker)].Strike.unique():

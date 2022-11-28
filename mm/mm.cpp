@@ -104,21 +104,20 @@ vector<string> tick_from_stream(char *buf) {
 }
 
 void init(MarketMaker *mm) {
-    filesystem::path ifpath = filesystem::current_path() / "mm/STRIKE_PRICES";
+    filesystem::path tradedOptionsPath =
+        filesystem::current_path() / "mm/TRADED_OPTIONS";
+    filesystem::path stockPath =
+        filesystem::current_path() / "data-sources/AMZN_STOCK.csv";
 
     string line;
 
-    fstream ifile(ifpath, ios::in);
+    fstream tradedOptionsFile(tradedOptionsPath, ios::in);
 
-    Option *option = new Option("AMZN", 'C', 1500.5, "20200130");
-
-    mm->updateOption(option, 10);
-
-    // if (ifile.is_open()) {
-    //     while (getline(ifile, line)) {
-    //     }
-    //     ifile.close();
-    // }
+    if (tradedOptionsFile.is_open()) {
+        while (getline(tradedOptionsFile, line)) {
+        }
+        tradedOptionsFile.close();
+    }
 }
 
 void process(vector<string> tick, MarketMaker *mm) {
@@ -135,17 +134,18 @@ int main() {
     init(mm);
 
     // FIFO file path
-    filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
-    const char *myfifo = ofpath.c_str();
+    filesystem::path orderbookPath =
+        filesystem::current_path() / "market/ORDERBOOK";
+    const char *orderbookPipe = orderbookPath.c_str();
 
     // Creating the named file(FIFO)
     // mkfifo(<pathname>, <permission>)
-    mkfifo(myfifo, 0644);
+    mkfifo(orderbookPipe, 0644);
 
     char buf[1028];
     vector<string> tick;
     // Open FIFO for Read only
-    int fd = open(myfifo, O_RDONLY);
+    int fd = open(orderbookPipe, O_RDONLY);
     while (1) {
 
         // Read from FIFO
