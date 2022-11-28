@@ -32,7 +32,7 @@ int main() {
     if (ifile.is_open()) {
         fd = open(myfifo, O_WRONLY);
         while (getline(ifile, line)) {
-            this_thread::sleep_for(chrono::milliseconds(10000));
+            this_thread::sleep_for(chrono::milliseconds(1000));
 
             // Now open in write mode and write
             // string taken from user.

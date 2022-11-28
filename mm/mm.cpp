@@ -14,6 +14,12 @@
 #include <unordered_map>
 #include <vector>
 
+#define MINIFY                                                                 \
+    string t = option->ticker;                                                 \
+    char c = option->callPut;                                                  \
+    string e = option->expirationDate;                                         \
+    double s = option->strike;
+
 using namespace std;
 
 class MarketMaker {
@@ -54,29 +60,33 @@ class MarketMaker {
         }
     }
 
-    void setOption(string ticker, char callPut, string expiration,
-                   double strike, double bid, double ask, double volume) {
-        this->options[ticker][callPut][expiration][strike]["bid"] = bid;
-        this->options[ticker][callPut][expiration][strike]["ask"] = ask;
-        this->options[ticker][callPut][expiration][strike]["volume"] = volume;
+    void setOption(Option *option, double bid, double ask, double volume) {
+        MINIFY;
+        this->options[t][c][e][s]["bid"] = bid;
+        this->options[t][c][e][s]["ask"] = ask;
+        this->options[t][c][e][s]["volume"] = volume;
     }
 
-    bool updateOption(string ticker, char callPut, string expiration,
-                      double strike, double) {}
+    bool updateOption(Option *option, double volume) {
+        MINIFY;
+        cout << t;
+        cout << e;
 
-    bool removeOption(string ticker, char callPut, string expiration,
-                      double strike) {
-        if (options.count(ticker) == 0 || options[ticker].count(callPut) == 0 ||
-            options[ticker][callPut].count(expiration) == 0 ||
-            options[ticker][callPut][expiration].count(strike) == 0) {
+        return true;
+    }
+
+    bool removeOption(Option *option) {
+        MINIFY;
+        if (options.count(t) == 0 || options[t].count(c) == 0 ||
+            options[t][c].count(e) == 0 || options[t][c][e].count(s) == 0) {
             return false;
         }
-        options[ticker][callPut][expiration].erase(strike);
-        if (options[ticker][callPut][expiration].size() == 0) {
-            options[ticker][callPut].erase(expiration);
+        options[t][c][e].erase(s);
+        if (options[t][c][e].size() == 0) {
+            options[t][c].erase(e);
         }
-        if (options[ticker][callPut].size() == 0) {
-            options[ticker].erase(callPut);
+        if (options[t][c].size() == 0) {
+            options[t].erase(c);
         }
         return true;
     }
@@ -99,45 +109,32 @@ vector<string> tick_from_stream(char *buf) {
 void init(MarketMaker *mm) {
     filesystem::path ifpath = filesystem::current_path() / "mm/STRIKE_PRICES";
 
-    vector<string> option;
     string line;
 
     fstream ifile(ifpath, ios::in);
 
-    if (ifile.is_open()) {
-        while (getline(ifile, line)) {
-            option = tick_from_stream(line.data());
-        }
-        ifile.close();
-    }
+    Option *option = new Option("AMZN", 'C', 1500.5, "20200130");
+
+    mm->updateOption(option, 10);
+
+    // if (ifile.is_open()) {
+    //     while (getline(ifile, line)) {
+    //     }
+    //     ifile.close();
+    // }
 }
 
 void process(vector<string> tick, MarketMaker *mm) {
     for (string attribute : tick) {
         cout << attribute << " ";
     }
-
-    mm->setOption(tick[Options::Ticker], tick[Options::CallPut].front(),
-                  tick[Options::ExpirationDate], stod(tick[Options::Strike]),
-                  stod(tick[Options::LowBidPrice]),
-                  stod(tick[Options::LowAskPrice]), 10);
-
-    cout << endl;
-
-    mm->printOptions();
-
-    mm->removeOption(tick[Options::Ticker], tick[Options::CallPut].front(),
-                     tick[Options::ExpirationDate],
-                     stod(tick[Options::Strike]));
-
-    mm->printOptions();
-
-    cout << endl;
 }
 
 int main() {
 
     MarketMaker *mm = new MarketMaker(100000);
+
+    // init(mm);
 
     // FIFO file path
     filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
