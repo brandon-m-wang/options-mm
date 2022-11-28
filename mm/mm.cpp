@@ -69,9 +69,6 @@ class MarketMaker {
 
     bool updateOption(Option *option, double volume) {
         MINIFY;
-        cout << t;
-        cout << e;
-
         return true;
     }
 
@@ -128,13 +125,14 @@ void process(vector<string> tick, MarketMaker *mm) {
     for (string attribute : tick) {
         cout << attribute << " ";
     }
+    cout << endl;
 }
 
 int main() {
 
     MarketMaker *mm = new MarketMaker(100000);
 
-    // init(mm);
+    init(mm);
 
     // FIFO file path
     filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
