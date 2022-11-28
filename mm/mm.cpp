@@ -89,7 +89,7 @@ class MarketMaker {
     }
 };
 
-vector<string> tick_from_stream(char *buf) {
+vector<string> tickFromStream(char *buf) {
     vector<string> tick;
 
     char delimiter[2] = ",";
@@ -101,6 +101,15 @@ vector<string> tick_from_stream(char *buf) {
     }
 
     return tick;
+}
+
+Option *optionFromFstream(string line) {
+
+    vector<string> tick = tickFromStream(line.data());
+
+    return new Option(
+        tick[TradedOptions::Ticker], tick[TradedOptions::CallPut].front(),
+        stod(tick[TradedOptions::Strike]), tick[TradedOptions::ExpirationDate]);
 }
 
 void init(MarketMaker *mm) {
@@ -115,6 +124,8 @@ void init(MarketMaker *mm) {
 
     if (tradedOptionsFile.is_open()) {
         while (getline(tradedOptionsFile, line)) {
+            mm->setOption(optionFromFstream(line), 10, 10, 10);
+            mm->printOptions();
         }
         tradedOptionsFile.close();
     }
@@ -151,7 +162,7 @@ int main() {
         // Read from FIFO
         read(fd, buf, sizeof(buf));
 
-        tick = tick_from_stream(buf);
+        tick = tickFromStream(buf);
 
         process(tick, mm);
     }

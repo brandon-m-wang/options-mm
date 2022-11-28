@@ -36,6 +36,10 @@ enum {
 };
 }
 
+namespace TradedOptions {
+enum { Ticker, CallPut, Strike, ExpirationDate };
+}
+
 using namespace std;
 
 class Option {
