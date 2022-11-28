@@ -39,6 +39,7 @@ int main() {
             write(fd, line.c_str(), strlen(line.c_str()) + 1);
         }
         close(fd);
+        ifile.close();
     }
 
     return 0;

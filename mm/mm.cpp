@@ -61,6 +61,9 @@ class MarketMaker {
         this->options[ticker][callPut][expiration][strike]["volume"] = volume;
     }
 
+    bool updateOption(string ticker, char callPut, string expiration,
+                      double strike, double) {}
+
     bool removeOption(string ticker, char callPut, string expiration,
                       double strike) {
         if (options.count(ticker) == 0 || options[ticker].count(callPut) == 0 ||
@@ -93,6 +96,22 @@ vector<string> tick_from_stream(char *buf) {
     return tick;
 }
 
+void init(MarketMaker *mm) {
+    filesystem::path ifpath = filesystem::current_path() / "mm/STRIKE_PRICES";
+
+    vector<string> option;
+    string line;
+
+    fstream ifile(ifpath, ios::in);
+
+    if (ifile.is_open()) {
+        while (getline(ifile, line)) {
+            option = tick_from_stream(line.data());
+        }
+        ifile.close();
+    }
+}
+
 void process(vector<string> tick, MarketMaker *mm) {
     for (string attribute : tick) {
         cout << attribute << " ";
@@ -107,14 +126,18 @@ void process(vector<string> tick, MarketMaker *mm) {
 
     mm->printOptions();
 
+    mm->removeOption(tick[Options::Ticker], tick[Options::CallPut].front(),
+                     tick[Options::ExpirationDate],
+                     stod(tick[Options::Strike]));
+
+    mm->printOptions();
+
     cout << endl;
 }
 
 int main() {
 
     MarketMaker *mm = new MarketMaker(100000);
-
-    int fd;
 
     // FIFO file path
     filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
@@ -127,7 +150,7 @@ int main() {
     char buf[1028];
     vector<string> tick;
     // Open FIFO for Read only
-    fd = open(myfifo, O_RDONLY);
+    int fd = open(myfifo, O_RDONLY);
     while (1) {
 
         // Read from FIFO
