@@ -34,6 +34,7 @@ using namespace std;
     MINIFY_STOCK;
 
 /* MATH */
+
 double approx(double highValue, double highSize, double lowValue,
               double lowSize) {
     return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
@@ -59,9 +60,10 @@ Option *optionFromFstream(string line) {
 
     vector<string> tick = tickFromBuffer(line.data());
 
-    return new Option(
-        tick[TradedOptions::Ticker], tick[TradedOptions::CallPut].front(),
-        stod(tick[TradedOptions::Strike]), tick[TradedOptions::ExpirationDate]);
+    return new Option(tick[TradedOptionsTick::Ticker],
+                      tick[TradedOptionsTick::CallPut].front(),
+                      stod(tick[TradedOptionsTick::Strike]),
+                      tick[TradedOptionsTick::ExpirationDate]);
 }
 
 Stock *stockFromFstream(string line) {
@@ -163,6 +165,12 @@ class MarketMaker {
         }
     }
 
+    /* PROPAGATORS */
+
+    void updateOptionFromTick(vector<string> tick) {}
+
+    /* MUTATORS */
+
     void setOption(Option *option, double bid, double ask, double volume) {
         MINIFY_OPTION;
         this->options[ot][oc][oe][os]["bid"] = bid;
@@ -170,17 +178,14 @@ class MarketMaker {
         this->options[ot][oc][oe][os]["volume"] = volume;
     }
 
-    bool updateOption(Option *option, double volume) {
-        MINIFY_OPTION;
-        return true;
-    }
+    void updateOption(Option *option, double volume) { MINIFY_OPTION; }
 
-    bool removeOption(Option *option) {
+    void removeOption(Option *option) {
         MINIFY_OPTION;
         if (options.count(ot) == 0 || options[ot].count(oc) == 0 ||
             options[ot][oc].count(oe) == 0 ||
             options[ot][oc][oe].count(os) == 0) {
-            return false;
+            return;
         }
         options[ot][oc][oe].erase(os);
         if (options[ot][oc][oe].size() == 0) {
@@ -189,7 +194,6 @@ class MarketMaker {
         if (options[ot][oc].size() == 0) {
             options[ot].erase(oc);
         }
-        return true;
     }
 };
 

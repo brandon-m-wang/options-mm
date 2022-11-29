@@ -36,7 +36,7 @@ enum {
 };
 }
 
-namespace TradedOptions {
+namespace TradedOptionsTick {
 enum { Ticker, CallPut, Strike, ExpirationDate };
 }
 
@@ -65,6 +65,102 @@ class Stock {
     Stock(string ticker, double price) {
         this->ticker = ticker;
         this->price = price;
+    }
+};
+
+class OptionTick {
+  public:
+    string ticker;
+    string timeBarStart;
+    char callPut;
+    double strike;
+    string expirationDate;
+    double highBidPrice;
+    double highBidSize;
+    double lowBidPrice;
+    double lowBidSize;
+    double highAskPrice;
+    double highAskSize;
+    double lowAskPrice;
+    double lowAskSize;
+    double highTradePrice;
+    double highTradeSize;
+    double lowTradePrice;
+    double lowTradeSize;
+    double volume;
+
+    OptionTick(string ticker, string timeBarStart, char callPut, double strike,
+               string expirationDate, double highBidPrice, double highBidSize,
+               double lowBidPrice, double lowBidSize, double highAskPrice,
+               double highAskSize, double lowAskPrice, double lowAskSize,
+               double highTradePrice, double highTradeSize,
+               double lowTradePrice, double lowTradeSize, double volume) {
+        this->ticker = ticker;
+        this->timeBarStart = timeBarStart;
+        this->callPut = callPut;
+        this->strike = strike;
+        this->expirationDate = expirationDate;
+        this->highBidPrice = highBidPrice;
+        this->highBidSize = highBidSize;
+        this->lowBidPrice = lowBidPrice;
+        this->lowBidSize = lowBidSize;
+        this->highAskPrice = highAskPrice;
+        this->highAskSize = highAskSize;
+        this->lowAskPrice = lowAskPrice;
+        this->lowAskSize = lowAskSize;
+        this->highTradePrice = highTradePrice;
+        this->highTradeSize = highTradeSize;
+        this->lowTradePrice = lowTradePrice;
+        this->lowTradeSize = lowTradeSize;
+        this->volume = volume;
+    }
+};
+
+class OptionTick {
+  public:
+    string ticker;
+    string timeBarStart;
+    char callPut;
+    double strike;
+    string expirationDate;
+    double highBidPrice;
+    double highBidSize;
+    double lowBidPrice;
+    double lowBidSize;
+    double highAskPrice;
+    double highAskSize;
+    double lowAskPrice;
+    double lowAskSize;
+    double highTradePrice;
+    double highTradeSize;
+    double lowTradePrice;
+    double lowTradeSize;
+    double volume;
+
+    OptionTick(string ticker, string timeBarStart, char callPut, double strike,
+               string expirationDate, double highBidPrice, double highBidSize,
+               double lowBidPrice, double lowBidSize, double highAskPrice,
+               double highAskSize, double lowAskPrice, double lowAskSize,
+               double highTradePrice, double highTradeSize,
+               double lowTradePrice, double lowTradeSize, double volume) {
+        this->ticker = ticker;
+        this->timeBarStart = timeBarStart;
+        this->callPut = callPut;
+        this->strike = strike;
+        this->expirationDate = expirationDate;
+        this->highBidPrice = highBidPrice;
+        this->highBidSize = highBidSize;
+        this->lowBidPrice = lowBidPrice;
+        this->lowBidSize = lowBidSize;
+        this->highAskPrice = highAskPrice;
+        this->highAskSize = highAskSize;
+        this->lowAskPrice = lowAskPrice;
+        this->lowAskSize = lowAskSize;
+        this->highTradePrice = highTradePrice;
+        this->highTradeSize = highTradeSize;
+        this->lowTradePrice = lowTradePrice;
+        this->lowTradeSize = lowTradeSize;
+        this->volume = volume;
     }
 };
 
