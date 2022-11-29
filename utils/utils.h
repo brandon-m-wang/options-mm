@@ -1,7 +1,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace Options {
+namespace OptionTick {
 enum {
     Ticker,
     TimeBarStart,
@@ -24,7 +24,7 @@ enum {
 };
 }
 
-namespace Stock {
+namespace StockTick {
 enum {
     Ticker,
     TimeBarStart,
@@ -56,6 +56,22 @@ class Option {
         this->expirationDate = expirationDate;
     }
 };
+
+class Stock {
+  public:
+    string ticker;
+    double price;
+
+    Stock(string ticker, double price) {
+        this->ticker = ticker;
+        this->price = price;
+    }
+};
+
+double approx(double highValue, double highSize, double lowValue,
+              double lowSize) {
+    return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
+}
 
 typedef std::unordered_map<std::string, double> price_volume;
 typedef std::unordered_map<double, price_volume> expiration_to_price_volume;

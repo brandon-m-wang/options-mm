@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <string>
@@ -14,11 +15,19 @@
 #include <unordered_map>
 #include <vector>
 
+#define MINIFY_OPTION                                                          \
+    string ot = option->ticker;                                                \
+    char oc = option->callPut;                                                 \
+    string oe = option->expirationDate;                                        \
+    double os = option->strike;
+
+#define MINIFY_STOCK                                                           \
+    string st = stock->ticker;                                                 \
+    double sp = stock->price;
+
 #define MINIFY                                                                 \
-    string t = option->ticker;                                                 \
-    char c = option->callPut;                                                  \
-    string e = option->expirationDate;                                         \
-    double s = option->strike;
+    MINIFY_OPTION;                                                             \
+    MINIFY_STOCK;
 
 using namespace std;
 
@@ -61,29 +70,30 @@ class MarketMaker {
     }
 
     void setOption(Option *option, double bid, double ask, double volume) {
-        MINIFY;
-        this->options[t][c][e][s]["bid"] = bid;
-        this->options[t][c][e][s]["ask"] = ask;
-        this->options[t][c][e][s]["volume"] = volume;
+        MINIFY_OPTION;
+        this->options[ot][oc][oe][os]["bid"] = bid;
+        this->options[ot][oc][oe][os]["ask"] = ask;
+        this->options[ot][oc][oe][os]["volume"] = volume;
     }
 
     bool updateOption(Option *option, double volume) {
-        MINIFY;
+        MINIFY_OPTION;
         return true;
     }
 
     bool removeOption(Option *option) {
-        MINIFY;
-        if (options.count(t) == 0 || options[t].count(c) == 0 ||
-            options[t][c].count(e) == 0 || options[t][c][e].count(s) == 0) {
+        MINIFY_OPTION;
+        if (options.count(ot) == 0 || options[ot].count(oc) == 0 ||
+            options[ot][oc].count(oe) == 0 ||
+            options[ot][oc][oe].count(os) == 0) {
             return false;
         }
-        options[t][c][e].erase(s);
-        if (options[t][c][e].size() == 0) {
-            options[t][c].erase(e);
+        options[ot][oc][oe].erase(os);
+        if (options[ot][oc][oe].size() == 0) {
+            options[ot][oc].erase(oe);
         }
-        if (options[t][c].size() == 0) {
-            options[t].erase(c);
+        if (options[ot][oc].size() == 0) {
+            options[ot].erase(oc);
         }
         return true;
     }
@@ -112,30 +122,57 @@ Option *optionFromFstream(string line) {
         stod(tick[TradedOptions::Strike]), tick[TradedOptions::ExpirationDate]);
 }
 
+Stock *stockFromFstream(string line) {
+
+    vector<string> tick = tickFromStream(line.data());
+
+    return new Stock(tick[StockTick::Ticker],
+                     approx(stod(tick[StockTick::HighTradePrice]),
+                            stod(tick[StockTick::HighTradeSize]),
+                            stod(tick[StockTick::LowTradePrice]),
+                            stod(tick[StockTick::LowTradeSize])));
+}
+
+double priceBid(Option *option, Stock *stock) {
+    MINIFY;
+    if (oc == 'C') {
+        return max(sp - os - 1, 0.0);
+    } else if (oc == 'P') {
+        return max(os - sp - 1, 0.0);
+    }
+}
+
+double priceAsk(Option *option, Stock *stock) {
+    MINIFY;
+    if (oc == 'C') {
+        return max(sp - os + 1, 0.0);
+    } else if (oc == 'P') {
+        return max(os - sp + 1, 0.0);
+    }
+}
+
 void init(MarketMaker *mm) {
     filesystem::path tradedOptionsPath =
         filesystem::current_path() / "mm/TRADED_OPTIONS";
     filesystem::path stockPath =
-        filesystem::current_path() / "data-sources/AMZN_STOCK.csv";
+        filesystem::current_path() / "data-sources/AMZN_STOCK_XFM.csv";
+
+    fstream tradedOptionsFstream(tradedOptionsPath, ios::in);
+    fstream stockFstream(stockPath, ios::in);
 
     string line;
 
-    fstream tradedOptionsFile(tradedOptionsPath, ios::in);
+    getline(stockFstream, line);
+    Stock *stock = stockFromFstream(line);
 
-    if (tradedOptionsFile.is_open()) {
-        while (getline(tradedOptionsFile, line)) {
-            mm->setOption(optionFromFstream(line), 10, 10, 10);
-            mm->printOptions();
+    if (tradedOptionsFstream.is_open()) {
+        while (getline(tradedOptionsFstream, line)) {
+            Option *option = optionFromFstream(line);
+            mm->setOption(option, priceBid(option, stock),
+                          priceAsk(option, stock), 50);
         }
-        tradedOptionsFile.close();
+        tradedOptionsFstream.close();
     }
-}
-
-void process(vector<string> tick, MarketMaker *mm) {
-    for (string attribute : tick) {
-        cout << attribute << " ";
-    }
-    cout << endl;
 }
 
 int main() {
@@ -163,8 +200,7 @@ int main() {
         read(fd, buf, sizeof(buf));
 
         tick = tickFromStream(buf);
-
-        process(tick, mm);
+        cout << "tick!" << endl;
     }
     close(fd);
 
