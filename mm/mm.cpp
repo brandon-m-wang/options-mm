@@ -15,6 +15,10 @@
 #include <unordered_map>
 #include <vector>
 
+using namespace std;
+
+/* MACROS */
+
 #define MINIFY_OPTION                                                          \
     string ot = option->ticker;                                                \
     char oc = option->callPut;                                                 \
@@ -29,7 +33,69 @@
     MINIFY_OPTION;                                                             \
     MINIFY_STOCK;
 
-using namespace std;
+/* DATA STREAM */
+
+vector<string> tickFromBuffer(char *buf) {
+    vector<string> tick;
+
+    char delimiter[2] = ",";
+    char *token = strtok(buf, delimiter);
+
+    while (token != NULL) {
+        tick.push_back(token);
+        token = strtok(NULL, delimiter);
+    }
+
+    return tick;
+}
+
+Option *optionFromFstream(string line) {
+
+    vector<string> tick = tickFromBuffer(line.data());
+
+    return new Option(
+        tick[TradedOptions::Ticker], tick[TradedOptions::CallPut].front(),
+        stod(tick[TradedOptions::Strike]), tick[TradedOptions::ExpirationDate]);
+}
+
+Stock *stockFromFstream(string line) {
+
+    vector<string> tick = tickFromBuffer(line.data());
+
+    return new Stock(tick[StockTick::Ticker],
+                     approx(stod(tick[StockTick::HighTradePrice]),
+                            stod(tick[StockTick::HighTradeSize]),
+                            stod(tick[StockTick::LowTradePrice]),
+                            stod(tick[StockTick::LowTradeSize])));
+}
+
+/* PRICING */
+
+double priceBid(Option *option, Stock *stock) {
+    MINIFY;
+    if (oc == 'C') {
+        return max(sp - os - 1, 0.0);
+    } else if (oc == 'P') {
+        return max(os - sp - 1, 0.0);
+    } else {
+        throw new std::invalid_argument(
+            "Option CallPut must be either P or C.");
+    }
+}
+
+double priceAsk(Option *option, Stock *stock) {
+    MINIFY;
+    if (oc == 'C') {
+        return max(sp - os + 1, 0.0);
+    } else if (oc == 'P') {
+        return max(os - sp + 1, 0.0);
+    } else {
+        throw new std::invalid_argument(
+            "Option CallPut must be either P or C.");
+    }
+}
+
+/* MM CLASS */
 
 class MarketMaker {
   public:
@@ -42,10 +108,32 @@ class MarketMaker {
     double permanent_losses;
     int trades;
 
-    MarketMaker(double equity) {
+    MarketMaker(double equity, double startingVolume) {
         this->equity = equity;
         this->pnl = this->unrealized_gains = this->unrealized_losses =
             this->permanent_gains = this->permanent_losses = 0;
+
+        filesystem::path tradedOptionsPath =
+            filesystem::current_path() / "mm/TRADED_OPTIONS";
+        filesystem::path stockPath =
+            filesystem::current_path() / "data-sources/AMZN_STOCK_XFM.csv";
+
+        fstream tradedOptionsFstream(tradedOptionsPath, ios::in);
+        fstream stockFstream(stockPath, ios::in);
+
+        string line;
+
+        getline(stockFstream, line);
+        Stock *stock = stockFromFstream(line);
+
+        if (tradedOptionsFstream.is_open()) {
+            while (getline(tradedOptionsFstream, line)) {
+                Option *option = optionFromFstream(line);
+                this->setOption(option, priceBid(option, stock),
+                                priceAsk(option, stock), startingVolume);
+            }
+            tradedOptionsFstream.close();
+        }
     }
 
     void printOptions() {
@@ -99,87 +187,11 @@ class MarketMaker {
     }
 };
 
-vector<string> tickFromStream(char *buf) {
-    vector<string> tick;
-
-    char delimiter[2] = ",";
-    char *token = strtok(buf, delimiter);
-
-    while (token != NULL) {
-        tick.push_back(token);
-        token = strtok(NULL, delimiter);
-    }
-
-    return tick;
-}
-
-Option *optionFromFstream(string line) {
-
-    vector<string> tick = tickFromStream(line.data());
-
-    return new Option(
-        tick[TradedOptions::Ticker], tick[TradedOptions::CallPut].front(),
-        stod(tick[TradedOptions::Strike]), tick[TradedOptions::ExpirationDate]);
-}
-
-Stock *stockFromFstream(string line) {
-
-    vector<string> tick = tickFromStream(line.data());
-
-    return new Stock(tick[StockTick::Ticker],
-                     approx(stod(tick[StockTick::HighTradePrice]),
-                            stod(tick[StockTick::HighTradeSize]),
-                            stod(tick[StockTick::LowTradePrice]),
-                            stod(tick[StockTick::LowTradeSize])));
-}
-
-double priceBid(Option *option, Stock *stock) {
-    MINIFY;
-    if (oc == 'C') {
-        return max(sp - os - 1, 0.0);
-    } else if (oc == 'P') {
-        return max(os - sp - 1, 0.0);
-    }
-}
-
-double priceAsk(Option *option, Stock *stock) {
-    MINIFY;
-    if (oc == 'C') {
-        return max(sp - os + 1, 0.0);
-    } else if (oc == 'P') {
-        return max(os - sp + 1, 0.0);
-    }
-}
-
-void init(MarketMaker *mm) {
-    filesystem::path tradedOptionsPath =
-        filesystem::current_path() / "mm/TRADED_OPTIONS";
-    filesystem::path stockPath =
-        filesystem::current_path() / "data-sources/AMZN_STOCK_XFM.csv";
-
-    fstream tradedOptionsFstream(tradedOptionsPath, ios::in);
-    fstream stockFstream(stockPath, ios::in);
-
-    string line;
-
-    getline(stockFstream, line);
-    Stock *stock = stockFromFstream(line);
-
-    if (tradedOptionsFstream.is_open()) {
-        while (getline(tradedOptionsFstream, line)) {
-            Option *option = optionFromFstream(line);
-            mm->setOption(option, priceBid(option, stock),
-                          priceAsk(option, stock), 50);
-        }
-        tradedOptionsFstream.close();
-    }
-}
+/* RUN */
 
 int main() {
 
-    MarketMaker *mm = new MarketMaker(100000);
-
-    init(mm);
+    MarketMaker *mm = new MarketMaker(100000, 50);
 
     // FIFO file path
     filesystem::path orderbookPath =
@@ -199,7 +211,7 @@ int main() {
         // Read from FIFO
         read(fd, buf, sizeof(buf));
 
-        tick = tickFromStream(buf);
+        tick = tickFromBuffer(buf);
         cout << "tick!" << endl;
     }
     close(fd);
