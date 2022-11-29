@@ -68,11 +68,6 @@ class Stock {
     }
 };
 
-double approx(double highValue, double highSize, double lowValue,
-              double lowSize) {
-    return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
-}
-
 typedef std::unordered_map<std::string, double> price_volume;
 typedef std::unordered_map<double, price_volume> expiration_to_price_volume;
 typedef std::unordered_map<std::string, expiration_to_price_volume>

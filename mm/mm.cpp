@@ -33,6 +33,12 @@ using namespace std;
     MINIFY_OPTION;                                                             \
     MINIFY_STOCK;
 
+/* MATH */
+double approx(double highValue, double highSize, double lowValue,
+              double lowSize) {
+    return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
+}
+
 /* DATA STREAM */
 
 vector<string> tickFromBuffer(char *buf) {
