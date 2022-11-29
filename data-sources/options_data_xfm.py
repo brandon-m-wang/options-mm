@@ -17,15 +17,6 @@ df_transformed.to_csv(os.path.join(sys.path[0], 'AMZN_OPTIONS_XFM.csv'),
                         'ExpirationDate',
                         'HighBidPrice', 
                         'HighBidSize', 
-                        'LowBidPrice', 
-                        'LowBidSize', 
-                        'HighAskPrice', 
-                        'HighAskSize', 
                         'LowAskPrice', 
-                        'LowAskSize', 
-                        'HighTradePrice', 
-                        'HighTradeSize', 
-                        'LowTradePrice', 
-                        'LowTradeSize', 
-                        'Volume'
+                        'LowAskSize'
                         ])

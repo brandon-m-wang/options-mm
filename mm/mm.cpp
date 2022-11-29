@@ -20,14 +20,14 @@ using namespace std;
 /* MACROS */
 
 #define MINIFY_OPTION                                                          \
-    string ot = option->ticker;                                                \
-    char oc = option->callPut;                                                 \
-    string oe = option->expirationDate;                                        \
-    double os = option->strike;
+    string ot = option.ticker;                                                 \
+    char oc = option.callPut;                                                  \
+    string oe = option.expirationDate;                                         \
+    double os = option.strike;
 
 #define MINIFY_STOCK                                                           \
-    string st = stock->ticker;                                                 \
-    double sp = stock->price;
+    string st = stock.ticker;                                                  \
+    double sp = stock.price;
 
 #define MINIFY                                                                 \
     MINIFY_OPTION;                                                             \
@@ -56,30 +56,44 @@ vector<string> tickFromBuffer(char *buf) {
     return tick;
 }
 
-Option *optionFromFstream(string line) {
-
-    vector<string> tick = tickFromBuffer(line.data());
-
-    return new Option(tick[TradedOptionsTick::Ticker],
-                      tick[TradedOptionsTick::CallPut].front(),
-                      stod(tick[TradedOptionsTick::Strike]),
-                      tick[TradedOptionsTick::ExpirationDate]);
+Option optionFromOptionTick(vector<string> tick) {
+    return Option(tick[OptionTick::Ticker], tick[OptionTick::CallPut].front(),
+                  stod(tick[OptionTick::Strike]),
+                  tick[OptionTick::ExpirationDate]);
 }
 
-Stock *stockFromFstream(string line) {
+Option optionFromTradedOptionTick(vector<string> tick) {
+    return Option(tick[TradedOptionTick::Ticker],
+                  tick[TradedOptionTick::CallPut].front(),
+                  stod(tick[TradedOptionTick::Strike]),
+                  tick[TradedOptionTick::ExpirationDate]);
+}
+
+Option optionFromFstream(string line) {
 
     vector<string> tick = tickFromBuffer(line.data());
 
-    return new Stock(tick[StockTick::Ticker],
-                     approx(stod(tick[StockTick::HighTradePrice]),
-                            stod(tick[StockTick::HighTradeSize]),
-                            stod(tick[StockTick::LowTradePrice]),
-                            stod(tick[StockTick::LowTradeSize])));
+    return optionFromTradedOptionTick(tick);
+}
+
+Stock stockFromStockTick(vector<string> tick) {
+    return Stock(tick[StockTick::Ticker],
+                 approx(stod(tick[StockTick::HighTradePrice]),
+                        stod(tick[StockTick::HighTradeSize]),
+                        stod(tick[StockTick::LowTradePrice]),
+                        stod(tick[StockTick::LowTradeSize])));
+}
+
+Stock stockFromFstream(string line) {
+
+    vector<string> tick = tickFromBuffer(line.data());
+
+    return stockFromStockTick(tick);
 }
 
 /* PRICING */
 
-double priceBid(Option *option, Stock *stock) {
+double priceBid(Option option, Stock stock) {
     MINIFY;
     if (oc == 'C') {
         return max(sp - os - 1, 0.0);
@@ -91,7 +105,7 @@ double priceBid(Option *option, Stock *stock) {
     }
 }
 
-double priceAsk(Option *option, Stock *stock) {
+double priceAsk(Option option, Stock stock) {
     MINIFY;
     if (oc == 'C') {
         return max(sp - os + 1, 0.0);
@@ -132,69 +146,74 @@ class MarketMaker {
         string line;
 
         getline(stockFstream, line);
-        Stock *stock = stockFromFstream(line);
+        Stock stock = stockFromFstream(line);
 
         if (tradedOptionsFstream.is_open()) {
             while (getline(tradedOptionsFstream, line)) {
-                Option *option = optionFromFstream(line);
+                Option option = optionFromFstream(line);
                 this->setOption(option, priceBid(option, stock),
                                 priceAsk(option, stock), startingVolume);
             }
             tradedOptionsFstream.close();
         }
+        this->printOptions();
     }
 
+    /* DEBUG */
+
     void printOptions() {
-        for (auto const &[ticker, callPutToExpiration] : this->options) {
-            cout << ticker << endl;
-            for (auto const &[callPut, expirationToStrike] :
-                 callPutToExpiration) {
-                cout << "\t" << callPut << endl;
-                for (auto const &[expiration, strikeToPriceVolume] :
-                     expirationToStrike) {
-                    cout << "\t\t" << expiration << endl;
-                    for (auto const &[strike, price_volume] :
-                         strikeToPriceVolume) {
-                        cout << "\t\t\t" << strike << endl;
-                        for (auto const &[key, value] : price_volume) {
-                            cout << "\t\t\t\t" << key << ": " << value << endl;
-                        }
-                    }
-                }
-            }
+        for (auto &[option, price_volume] : this->options) {
+            cout << option.strike << " " << option.callPut << endl;
+            cout << price_volume["bid"] << " " << price_volume["ask"] << " "
+                 << price_volume["volume"] << endl;
         }
     }
 
     /* PROPAGATORS */
 
-    void updateOptionFromTick(vector<string> tick) {}
+    void updateOptionFromTick(vector<string> tick) {
+        Option option = optionFromOptionTick(tick);
+        if (stod(tick[OptionTick::LowAskPrice]) <=
+            this->options[option]["bid"]) {
+            this->addOptionVolume(option, stod(tick[OptionTick::LowAskSize]));
+        }
+        if (stod(tick[OptionTick::HighBidPrice]) >=
+            this->options[option]["ask"]) {
+            this->subOptionVolume(option, stod(tick[OptionTick::HighBidSize]));
+        }
+    }
+
+    /* SECONDARY MUTATORS */
+
+    void addOptionVolume(Option option, double addition) {
+        setOptionVolume(option, this->options[option]["volume"] + addition);
+    }
+
+    void subOptionVolume(Option option, double reduction) {
+        setOptionVolume(option, this->options[option]["volume"] - reduction);
+    }
 
     /* MUTATORS */
 
-    void setOption(Option *option, double bid, double ask, double volume) {
-        MINIFY_OPTION;
-        this->options[ot][oc][oe][os]["bid"] = bid;
-        this->options[ot][oc][oe][os]["ask"] = ask;
-        this->options[ot][oc][oe][os]["volume"] = volume;
+    void setOptionBid(Option option, double bid) {
+        this->options[option]["bid"] = bid;
     }
 
-    void updateOption(Option *option, double volume) { MINIFY_OPTION; }
-
-    void removeOption(Option *option) {
-        MINIFY_OPTION;
-        if (options.count(ot) == 0 || options[ot].count(oc) == 0 ||
-            options[ot][oc].count(oe) == 0 ||
-            options[ot][oc][oe].count(os) == 0) {
-            return;
-        }
-        options[ot][oc][oe].erase(os);
-        if (options[ot][oc][oe].size() == 0) {
-            options[ot][oc].erase(oe);
-        }
-        if (options[ot][oc].size() == 0) {
-            options[ot].erase(oc);
-        }
+    void setOptionAsk(Option option, double ask) {
+        this->options[option]["ask"] = ask;
     }
+
+    void setOptionVolume(Option option, double volume) {
+        this->options[option]["volume"] = volume;
+    }
+
+    void setOption(Option option, double bid, double ask, double volume) {
+        this->options[option]["bid"] = bid;
+        this->options[option]["ask"] = ask;
+        this->options[option]["volume"] = volume;
+    }
+
+    void removeOption(Option option) { this->options[option].clear(); }
 };
 
 /* RUN */

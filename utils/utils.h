@@ -10,17 +10,8 @@ enum {
     ExpirationDate,
     HighBidPrice,
     HighBidSize,
-    LowBidPrice,
-    LowBidSize,
-    HighAskPrice,
-    HighAskSize,
     LowAskPrice,
-    LowAskSize,
-    HighTradePrice,
-    HighTradeSize,
-    LowTradePrice,
-    LowTradeSize,
-    Volume
+    LowAskSize
 };
 }
 
@@ -31,12 +22,11 @@ enum {
     HighTradePrice,
     HighTradeSize,
     LowTradePrice,
-    LowTradeSize,
-    Volume
+    LowTradeSize
 };
 }
 
-namespace TradedOptionsTick {
+namespace TradedOptionTick {
 enum { Ticker, CallPut, Strike, ExpirationDate };
 }
 
@@ -55,6 +45,16 @@ class Option {
         this->strike = strike;
         this->expirationDate = expirationDate;
     }
+
+    bool operator==(const Option &otherOption) const {
+        if (this->ticker == otherOption.ticker &&
+            this->callPut == otherOption.callPut &&
+            this->strike == otherOption.strike &&
+            this->expirationDate == otherOption.expirationDate)
+            return true;
+        else
+            return false;
+    }
 };
 
 class Stock {
@@ -68,105 +68,16 @@ class Stock {
     }
 };
 
-class OptionTick {
-  public:
-    string ticker;
-    string timeBarStart;
-    char callPut;
-    double strike;
-    string expirationDate;
-    double highBidPrice;
-    double highBidSize;
-    double lowBidPrice;
-    double lowBidSize;
-    double highAskPrice;
-    double highAskSize;
-    double lowAskPrice;
-    double lowAskSize;
-    double highTradePrice;
-    double highTradeSize;
-    double lowTradePrice;
-    double lowTradeSize;
-    double volume;
-
-    OptionTick(string ticker, string timeBarStart, char callPut, double strike,
-               string expirationDate, double highBidPrice, double highBidSize,
-               double lowBidPrice, double lowBidSize, double highAskPrice,
-               double highAskSize, double lowAskPrice, double lowAskSize,
-               double highTradePrice, double highTradeSize,
-               double lowTradePrice, double lowTradeSize, double volume) {
-        this->ticker = ticker;
-        this->timeBarStart = timeBarStart;
-        this->callPut = callPut;
-        this->strike = strike;
-        this->expirationDate = expirationDate;
-        this->highBidPrice = highBidPrice;
-        this->highBidSize = highBidSize;
-        this->lowBidPrice = lowBidPrice;
-        this->lowBidSize = lowBidSize;
-        this->highAskPrice = highAskPrice;
-        this->highAskSize = highAskSize;
-        this->lowAskPrice = lowAskPrice;
-        this->lowAskSize = lowAskSize;
-        this->highTradePrice = highTradePrice;
-        this->highTradeSize = highTradeSize;
-        this->lowTradePrice = lowTradePrice;
-        this->lowTradeSize = lowTradeSize;
-        this->volume = volume;
+struct OptionHashFunc {
+    size_t operator()(const Option &option) const {
+        return ((((hash<string>()(option.ticker) ^
+                   (hash<char>()(option.callPut) << 1)) >>
+                  1) ^
+                 (hash<double>()(option.strike) << 1)) >>
+                1) ^
+               (hash<string>()(option.expirationDate) << 1);
     }
 };
 
-class OptionTick {
-  public:
-    string ticker;
-    string timeBarStart;
-    char callPut;
-    double strike;
-    string expirationDate;
-    double highBidPrice;
-    double highBidSize;
-    double lowBidPrice;
-    double lowBidSize;
-    double highAskPrice;
-    double highAskSize;
-    double lowAskPrice;
-    double lowAskSize;
-    double highTradePrice;
-    double highTradeSize;
-    double lowTradePrice;
-    double lowTradeSize;
-    double volume;
-
-    OptionTick(string ticker, string timeBarStart, char callPut, double strike,
-               string expirationDate, double highBidPrice, double highBidSize,
-               double lowBidPrice, double lowBidSize, double highAskPrice,
-               double highAskSize, double lowAskPrice, double lowAskSize,
-               double highTradePrice, double highTradeSize,
-               double lowTradePrice, double lowTradeSize, double volume) {
-        this->ticker = ticker;
-        this->timeBarStart = timeBarStart;
-        this->callPut = callPut;
-        this->strike = strike;
-        this->expirationDate = expirationDate;
-        this->highBidPrice = highBidPrice;
-        this->highBidSize = highBidSize;
-        this->lowBidPrice = lowBidPrice;
-        this->lowBidSize = lowBidSize;
-        this->highAskPrice = highAskPrice;
-        this->highAskSize = highAskSize;
-        this->lowAskPrice = lowAskPrice;
-        this->lowAskSize = lowAskSize;
-        this->highTradePrice = highTradePrice;
-        this->highTradeSize = highTradeSize;
-        this->lowTradePrice = lowTradePrice;
-        this->lowTradeSize = lowTradeSize;
-        this->volume = volume;
-    }
-};
-
-typedef std::unordered_map<std::string, double> price_volume;
-typedef std::unordered_map<double, price_volume> expiration_to_price_volume;
-typedef std::unordered_map<std::string, expiration_to_price_volume>
-    strike_to_expiration;
-typedef std::unordered_map<char, strike_to_expiration> call_put_to_strike;
-typedef std::unordered_map<std::string, call_put_to_strike> options_map;
+typedef unordered_map<string, double> price_volume;
+typedef unordered_map<Option, price_volume, OptionHashFunc> options_map;
