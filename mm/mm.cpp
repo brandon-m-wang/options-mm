@@ -49,7 +49,8 @@ bool updatePriceSignal(string *prevTime, string time) {
 }
 
 int sinceMarketOpen(string time) {
-    return stoi(time.substr(0, 2)) * 60 + stoi(time.substr(3, 2)) - 570;
+    return stoi(time.substr(0, 2)) * 60 + stoi(time.substr(3, 2)) -
+           (9 * 60 + 30);
 }
 
 /* DATA STREAM */
@@ -167,7 +168,6 @@ class MarketMaker {
             }
             tradedOptionsFstream.close();
         }
-        this->printOptions();
     }
 
     /* DEBUG */
