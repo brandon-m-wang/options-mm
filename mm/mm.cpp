@@ -33,11 +33,23 @@ using namespace std;
     MINIFY_OPTION;                                                             \
     MINIFY_STOCK;
 
-/* MATH */
+/* COMPUTATION */
 
 double approx(double highValue, double highSize, double lowValue,
               double lowSize) {
     return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
+}
+
+bool updatePriceSignal(string *prevTime, string time) {
+    if (*prevTime != time) {
+        *prevTime = time;
+        return true;
+    }
+    return false;
+}
+
+int sinceMarketOpen(string time) {
+    return stoi(time.substr(0, 2)) * 60 + stoi(time.substr(3, 2)) - 570;
 }
 
 /* DATA STREAM */
@@ -129,16 +141,15 @@ class MarketMaker {
     double permanent_gains;
     double permanent_losses;
     int trades;
+    filesystem::path tradedOptionsPath =
+        filesystem::current_path() / "mm/TRADED_OPTIONS";
+    filesystem::path stockPath =
+        filesystem::current_path() / "data-sources/AMZN_STOCK_XFM.csv";
 
     MarketMaker(double equity, double startingVolume) {
         this->equity = equity;
         this->pnl = this->unrealized_gains = this->unrealized_losses =
             this->permanent_gains = this->permanent_losses = 0;
-
-        filesystem::path tradedOptionsPath =
-            filesystem::current_path() / "mm/TRADED_OPTIONS";
-        filesystem::path stockPath =
-            filesystem::current_path() / "data-sources/AMZN_STOCK_XFM.csv";
 
         fstream tradedOptionsFstream(tradedOptionsPath, ios::in);
         fstream stockFstream(stockPath, ios::in);
@@ -181,6 +192,19 @@ class MarketMaker {
             this->options[option]["ask"]) {
             this->subOptionVolume(option, stod(tick[OptionTick::HighBidSize]));
         }
+    }
+
+    void updateOptionPrices(string time) {
+        fstream stockFstream(stockPath, ios::in);
+
+        string line;
+        for (int i = 0; i < sinceMarketOpen(time); i++) {
+            getline(stockFstream, line);
+        }
+        getline(stockFstream, line);
+        Stock stock = stockFromFstream(line);
+
+        // TODO: update all bid/ask prices.
     }
 
     /* SECONDARY MUTATORS */
@@ -233,6 +257,7 @@ int main() {
 
     char buf[1028];
     vector<string> tick;
+    string prevTime;
     // Open FIFO for Read only
     int fd = open(orderbookPipe, O_RDONLY);
     while (1) {
@@ -241,7 +266,12 @@ int main() {
         read(fd, buf, sizeof(buf));
 
         tick = tickFromBuffer(buf);
-        cout << "tick!" << endl;
+
+        if (updatePriceSignal(&prevTime, tick[OptionTick::TimeBarStart])) {
+            mm->updateOptionPrices(tick[OptionTick::TimeBarStart]);
+        }
+
+        mm->updateOptionFromTick(tick);
     }
     close(fd);
 
