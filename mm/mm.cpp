@@ -99,32 +99,6 @@ Stock stockFromFstream(string line) {
     return stockFromStockTick(tick);
 }
 
-/* PRICING */
-
-double priceBid(Option option, Stock stock) {
-    MINIFY;
-    if (oc == 'C') {
-        return max(sp - os - 5, 0.0);
-    } else if (oc == 'P') {
-        return max(os - sp - 5, 0.0);
-    } else {
-        throw new std::invalid_argument(
-            "Option CallPut must be either P or C.");
-    }
-}
-
-double priceAsk(Option option, Stock stock) {
-    MINIFY;
-    if (oc == 'C') {
-        return max(sp - os + 5, 0.0);
-    } else if (oc == 'P') {
-        return max(os - sp + 5, 0.0);
-    } else {
-        throw new std::invalid_argument(
-            "Option CallPut must be either P or C.");
-    }
-}
-
 /* COX-ROSS-RUBENSTEIN OPTIONS PRICING MODEL */
 
 double price(int b, int y, double deltaT, double s, double k, double sigma,
@@ -225,8 +199,6 @@ class MarketMaker {
         this->tradedOptionsFstream.seekg(0);
         this->stockFstream.clear();
         this->stockFstream.seekg(0);
-
-        this->printOptions();
     }
 
     /* DEBUG */
@@ -262,6 +234,7 @@ class MarketMaker {
             this->setOptionBid(option, priceOption(option, stock));
             this->setOptionAsk(option, priceOption(option, stock));
         }
+        this->printOptions();
     }
 
     /* SECONDARY MUTATORS */
