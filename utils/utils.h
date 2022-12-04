@@ -79,5 +79,5 @@ struct OptionHashFunc {
     }
 };
 
-typedef unordered_map<string, double> price_volume;
-typedef unordered_map<Option, price_volume, OptionHashFunc> options_map;
+typedef unordered_map<string, double> metadata;
+typedef unordered_map<Option, metadata, OptionHashFunc> options_map;

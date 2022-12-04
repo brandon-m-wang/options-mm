@@ -162,10 +162,7 @@ class MarketMaker {
   public:
     options_map options;
     double pnl;
-    double unrealized_gains;
-    double unrealized_losses;
-    double permanent_gains;
-    double permanent_losses;
+    double upnl;
     int trades;
     fstream tradedOptionsFstream;
     fstream stockFstream;
@@ -175,8 +172,7 @@ class MarketMaker {
         filesystem::current_path() / getenv("STOCK_PATH");
 
     MarketMaker() {
-        this->pnl = this->unrealized_gains = this->unrealized_losses =
-            this->permanent_gains = this->permanent_losses = 0;
+        this->pnl = this->upnl = 0;
 
         this->tradedOptionsFstream = fstream(tradedOptionsPath, ios::in);
         this->stockFstream = fstream(stockPath, ios::in);
@@ -190,8 +186,8 @@ class MarketMaker {
             while (getline(tradedOptionsFstream, line)) {
                 Option option = optionFromFstream(line);
                 double price = priceOption(option, stock);
-                this->setOption(option, price - spread(price),
-                                price + spread(price), 0);
+                this->initOption(option, price - spread(price),
+                                 price + spread(price));
             }
             tradedOptionsFstream.close();
         }
@@ -205,25 +201,53 @@ class MarketMaker {
     /* DEBUG */
 
     void printOptions() {
-        for (auto &[option, priceVolume] : this->options) {
+        for (auto &[option, metadata] : this->options) {
             cout << option.strike << " " << option.callPut << endl;
-            cout << priceVolume["bid"] << " " << priceVolume["ask"] << " "
-                 << priceVolume["volume"] << endl;
+            cout << metadata["bid"] << " " << metadata["ask"] << " "
+                 << metadata["position"] << " " << metadata["long"] << " "
+                 << metadata["short"] << endl;
         }
+        cout << "Trades: " << this->trades << endl;
+        cout << "PnL: " << this->pnl << endl;
+        cout << "Unrealized PnL: " << this->upnl << endl;
     }
 
     /* PROPAGATORS */
 
+    void updatePnl(double lowAskPrice, double highBidPrice) {
+        this->upnl = 0;
+        for (auto &[option, metadata] : this->options) {
+            if (metadata["position"] == 0) {
+                this->pnl += metadata["short"] - metadata["long"];
+                metadata["short"] = metadata["long"] = 0;
+            } else {
+                if (metadata["position"] > 0) {
+                    this->upnl += metadata["short"] - metadata["long"] +
+                                  (highBidPrice * metadata["position"]);
+                } else {
+                    this->upnl += metadata["short"] - metadata["long"] +
+                                  (lowAskPrice * metadata["position"]);
+                }
+            }
+        }
+    }
+
     void updateOptionFromTick(vector<string> tick) {
         Option option = optionFromOptionTick(tick);
-        if (stod(tick[OptionTick::LowAskPrice]) <=
-            this->options[option]["bid"]) {
-            this->addOptionVolume(option, stod(tick[OptionTick::LowAskSize]));
+        double lowAskPrice = stod(tick[OptionTick::LowAskPrice]);
+        double lowAskSize = stod(tick[OptionTick::LowAskSize]);
+        double highBidPrice = stod(tick[OptionTick::HighBidPrice]);
+        double highBidSize = stod(tick[OptionTick::HighBidSize]);
+
+        if (lowAskPrice <= this->options[option]["bid"]) {
+            this->addLongPosition(option, lowAskSize);
+            trades += lowAskSize;
         }
-        if (stod(tick[OptionTick::HighBidPrice]) >=
-            this->options[option]["ask"]) {
-            this->subOptionVolume(option, stod(tick[OptionTick::HighBidSize]));
+        if (highBidPrice >= this->options[option]["ask"]) {
+            this->addShortPosition(option, highBidSize);
+            trades += highBidSize;
         }
+        this->updatePnl(lowAskPrice, highBidPrice);
     }
 
     void updateOptionPrices(string time) {
@@ -231,7 +255,7 @@ class MarketMaker {
         getline(stockFstream, line);
         Stock stock = stockFromFstream(line);
 
-        for (auto &[option, priceVolume] : this->options) {
+        for (auto &[option, metadata] : this->options) {
             double price = priceOption(option, stock);
             this->setOptionBid(option, price - spread(price));
             this->setOptionAsk(option, price + spread(price));
@@ -241,12 +265,17 @@ class MarketMaker {
 
     /* SECONDARY MUTATORS */
 
-    void addOptionVolume(Option option, double addition) {
-        setOptionVolume(option, this->options[option]["volume"] + addition);
+    void addLongPosition(Option option, double addition) {
+        this->options[option]["long"] +=
+            this->options[option]["bid"] * addition;
+        setOptionPosition(option, this->options[option]["position"] + addition);
     }
 
-    void subOptionVolume(Option option, double reduction) {
-        setOptionVolume(option, this->options[option]["volume"] - reduction);
+    void addShortPosition(Option option, double reduction) {
+        this->options[option]["short"] +=
+            this->options[option]["ask"] * reduction;
+        setOptionPosition(option,
+                          this->options[option]["position"] - reduction);
     }
 
     /* MUTATORS */
@@ -259,14 +288,16 @@ class MarketMaker {
         this->options[option]["ask"] = ask;
     }
 
-    void setOptionVolume(Option option, double volume) {
-        this->options[option]["volume"] = volume;
+    void setOptionPosition(Option option, double deltaP) {
+        this->options[option]["position"] = deltaP;
     }
 
-    void setOption(Option option, double bid, double ask, double volume) {
+    void initOption(Option option, double bid, double ask) {
         this->options[option]["bid"] = bid;
         this->options[option]["ask"] = ask;
-        this->options[option]["volume"] = volume;
+        this->options[option]["position"] = 0;
+        this->options[option]["long"] = 0;
+        this->options[option]["short"] = 0;
     }
 
     void removeOption(Option option) { this->options[option].clear(); }
