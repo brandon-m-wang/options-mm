@@ -154,12 +154,13 @@ double priceOption(Option option, Stock stock) {
     return price(b, y, deltaT, s, k, sigma, r);
 }
 
+double spread(double price) { return price * 0.01; }
+
 /* MM CLASS */
 
 class MarketMaker {
   public:
     options_map options;
-    double equity;
     double pnl;
     double unrealized_gains;
     double unrealized_losses;
@@ -173,8 +174,7 @@ class MarketMaker {
     const filesystem::path stockPath =
         filesystem::current_path() / getenv("STOCK_PATH");
 
-    MarketMaker(double equity, double startingVolume) {
-        this->equity = equity;
+    MarketMaker() {
         this->pnl = this->unrealized_gains = this->unrealized_losses =
             this->permanent_gains = this->permanent_losses = 0;
 
@@ -189,8 +189,9 @@ class MarketMaker {
         if (tradedOptionsFstream.is_open()) {
             while (getline(tradedOptionsFstream, line)) {
                 Option option = optionFromFstream(line);
-                this->setOption(option, priceOption(option, stock),
-                                priceOption(option, stock), startingVolume);
+                double price = priceOption(option, stock);
+                this->setOption(option, price - spread(price),
+                                price + spread(price), 0);
             }
             tradedOptionsFstream.close();
         }
@@ -231,8 +232,9 @@ class MarketMaker {
         Stock stock = stockFromFstream(line);
 
         for (auto &[option, priceVolume] : this->options) {
-            this->setOptionBid(option, priceOption(option, stock));
-            this->setOptionAsk(option, priceOption(option, stock));
+            double price = priceOption(option, stock);
+            this->setOptionBid(option, price - spread(price));
+            this->setOptionAsk(option, price + spread(price));
         }
         this->printOptions();
     }
@@ -274,7 +276,7 @@ class MarketMaker {
 
 int main() {
 
-    MarketMaker *mm = new MarketMaker(100000, 50);
+    MarketMaker *mm = new MarketMaker();
 
     // FIFO file path
     filesystem::path orderbookPath =
