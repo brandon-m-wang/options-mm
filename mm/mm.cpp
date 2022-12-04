@@ -147,20 +147,20 @@ double price(int b, int y, double deltaT, double s, double k, double sigma,
 
     double u = exp(sigma * sqrt(deltaT));
     double d = exp(-sigma * sqrt(deltaT));
-    double p = ((exp(r) * deltaT) - d) / (u - d);
+    double p = (exp(r * deltaT) - d) / (u - d);
     int n = y / deltaT;
 
     double lambda[n];
 
     for (int i = 0; i < n; i++) {
-        lambda[i] = b * (k - (s * pow(u, 2 * i - n)));
+        lambda[i] = b * ((s * pow(u, 2 * i - n)) - k);
         lambda[i] = max(lambda[i], 0.0);
     }
 
     for (int j = n - 1; j >= 0; j--) {
         for (int i = 0; i < j; i++) {
             lambda[i] = p * lambda[i + 1] + (1 - p) * lambda[i];
-            double e = b * (k - (s * pow(u, 2 * i - n)));
+            double e = b * ((s * pow(u, 2 * i - j)) - k);
             lambda[i] = max(lambda[i], e);
         }
     }
@@ -215,8 +215,8 @@ class MarketMaker {
         if (tradedOptionsFstream.is_open()) {
             while (getline(tradedOptionsFstream, line)) {
                 Option option = optionFromFstream(line);
-                this->setOption(option, priceBid(option, stock),
-                                priceAsk(option, stock), startingVolume);
+                this->setOption(option, priceOption(option, stock),
+                                priceOption(option, stock), startingVolume);
             }
             tradedOptionsFstream.close();
         }
@@ -225,6 +225,8 @@ class MarketMaker {
         this->tradedOptionsFstream.seekg(0);
         this->stockFstream.clear();
         this->stockFstream.seekg(0);
+
+        this->printOptions();
     }
 
     /* DEBUG */
@@ -257,8 +259,8 @@ class MarketMaker {
         Stock stock = stockFromFstream(line);
 
         for (auto &[option, priceVolume] : this->options) {
-            this->setOptionBid(option, priceBid(option, stock));
-            this->setOptionAsk(option, priceAsk(option, stock));
+            this->setOptionBid(option, priceOption(option, stock));
+            this->setOptionAsk(option, priceOption(option, stock));
         }
     }
 
