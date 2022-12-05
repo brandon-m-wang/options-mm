@@ -19,10 +19,7 @@ namespace StockTick {
 enum {
     Ticker,
     TimeBarStart,
-    HighTradePrice,
-    HighTradeSize,
-    LowTradePrice,
-    LowTradeSize
+    Price
 };
 }
 

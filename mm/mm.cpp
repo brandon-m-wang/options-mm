@@ -17,37 +17,6 @@
 
 using namespace std;
 
-/* MACROS */
-
-#define MINIFY_OPTION                                                          \
-    string ot = option.ticker;                                                 \
-    char oc = option.callPut;                                                  \
-    string oe = option.expirationDate;                                         \
-    double os = option.strike;
-
-#define MINIFY_STOCK                                                           \
-    string st = stock.ticker;                                                  \
-    double sp = stock.price;
-
-#define MINIFY                                                                 \
-    MINIFY_OPTION;                                                             \
-    MINIFY_STOCK;
-
-/* COMPUTATION */
-
-double approx(double highValue, double highSize, double lowValue,
-              double lowSize) {
-    return (highValue * highSize + lowValue * lowSize) / (highSize + lowSize);
-}
-
-bool updatePriceSignal(string *prevTime, string time) {
-    if (*prevTime == time) {
-        return false;
-    }
-    *prevTime = time;
-    return true;
-}
-
 /* DATA STREAM */
 
 vector<string> tickFromBuffer(char *buf) {
@@ -85,11 +54,7 @@ Option optionFromFstream(string line) {
 }
 
 Stock stockFromStockTick(vector<string> tick) {
-    return Stock(tick[StockTick::Ticker],
-                 approx(stod(tick[StockTick::HighTradePrice]),
-                        stod(tick[StockTick::HighTradeSize]),
-                        stod(tick[StockTick::LowTradePrice]),
-                        stod(tick[StockTick::LowTradeSize])));
+    return Stock(tick[StockTick::Ticker], stod(tick[StockTick::Price]));
 }
 
 Stock stockFromFstream(string line) {
@@ -212,7 +177,7 @@ class MarketMaker {
         cout << "Unrealized PnL: " << this->upnl << endl;
     }
 
-    /* PROPAGATORS */
+    /* TICK PROCESSING */
 
     void updatePnl(double lowAskPrice, double highBidPrice) {
         this->upnl = 0;
@@ -232,7 +197,7 @@ class MarketMaker {
         }
     }
 
-    void updateOptionFromTick(vector<string> tick) {
+    void updatePosition(vector<string> tick) {
         Option option = optionFromOptionTick(tick);
         double lowAskPrice = stod(tick[OptionTick::LowAskPrice]);
         double lowAskSize = stod(tick[OptionTick::LowAskSize]);
@@ -250,7 +215,7 @@ class MarketMaker {
         this->updatePnl(lowAskPrice, highBidPrice);
     }
 
-    void updateOptionPrices(string time) {
+    void updatePrices(string time) {
         string line;
         getline(stockFstream, line);
         Stock stock = stockFromFstream(line);
@@ -299,9 +264,17 @@ class MarketMaker {
         this->options[option]["long"] = 0;
         this->options[option]["short"] = 0;
     }
-
-    void removeOption(Option option) { this->options[option].clear(); }
 };
+
+/* COMPUTATION */
+
+bool updatePriceSignal(string *prevTime, string time) {
+    if (*prevTime == time) {
+        return false;
+    }
+    *prevTime = time;
+    return true;
+}
 
 /* RUN */
 
@@ -309,33 +282,31 @@ int main() {
 
     MarketMaker *mm = new MarketMaker();
 
-    // FIFO file path
     filesystem::path orderbookPath =
         filesystem::current_path() / getenv("ORDERBOOK_PATH");
     const char *orderbookPipe = orderbookPath.c_str();
 
-    // Creating the named file(FIFO)
-    // mkfifo(<pathname>, <permission>)
     mkfifo(orderbookPipe, 0644);
 
     char buf[1028];
     vector<string> tick;
     string prevTime;
-    // Open FIFO for Read only
+
     int fd = open(orderbookPipe, O_RDONLY);
+
     while (1) {
 
-        // Read from FIFO
         read(fd, buf, sizeof(buf));
 
         tick = tickFromBuffer(buf);
 
         if (updatePriceSignal(&prevTime, tick[OptionTick::TimeBarStart])) {
-            mm->updateOptionPrices(tick[OptionTick::TimeBarStart]);
+            mm->updatePrices(tick[OptionTick::TimeBarStart]);
         }
 
-        mm->updateOptionFromTick(tick);
+        mm->updatePosition(tick);
     }
+
     close(fd);
 
     return 0;

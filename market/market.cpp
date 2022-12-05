@@ -17,8 +17,9 @@ using namespace std;
 int main() {
 
     filesystem::path ifpath =
-        filesystem::current_path() / "data-sources/AMZN_OPTIONS_XFM.csv";
-    filesystem::path ofpath = filesystem::current_path() / "market/ORDERBOOK";
+        filesystem::current_path() / getenv("OPTIONS_PATH");
+    filesystem::path ofpath =
+        filesystem::current_path() / getenv("ORDERBOOK_PATH");
     const char *myfifo = ofpath.c_str();
 
     vector<string> row;
