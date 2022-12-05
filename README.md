@@ -16,6 +16,7 @@ For simplicity, we make a few assumptions:
 - The simulated market data is tweaked to be more volatile in the short-term to allow for more apparent results
 - No new contracts can be introduced in the middle of the simulation
 - All contracts share the same expiry date
+- All contracts are options for the same underlying security
 
 PnL and unrealized PnL are determined at each timestep for pricing strategy evauation.
 
