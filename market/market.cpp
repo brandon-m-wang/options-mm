@@ -16,32 +16,29 @@ using namespace std;
 
 int main() {
 
-    filesystem::path ifpath =
+    filesystem::path optionsPath =
         filesystem::current_path() / getenv("OPTIONS_PATH");
-    filesystem::path ofpath =
+    filesystem::path orderbookPath =
         filesystem::current_path() / getenv("ORDERBOOK_PATH");
-    const char *myfifo = ofpath.c_str();
+    const char *myfifo = orderbookPath.c_str();
+
+    fstream optionsFstream(optionsPath, ios::in);
 
     vector<string> row;
     string line;
 
     mkfifo(myfifo, 0644);
-    int fd;
 
-    fstream ifile(ifpath, ios::in);
+    int fd = open(myfifo, O_WRONLY);
 
-    if (ifile.is_open()) {
-        fd = open(myfifo, O_WRONLY);
-        while (getline(ifile, line)) {
-            this_thread::sleep_for(chrono::milliseconds(10));
+    while (getline(optionsFstream, line)) {
+        this_thread::sleep_for(chrono::milliseconds(10));
 
-            // Now open in write mode and write
-            // string taken from user.
-            write(fd, line.c_str(), strlen(line.c_str()) + 1);
-        }
-        close(fd);
-        ifile.close();
+        write(fd, line.c_str(), strlen(line.c_str()) + 1);
     }
+
+    close(fd);
+    optionsFstream.close();
 
     return 0;
 }

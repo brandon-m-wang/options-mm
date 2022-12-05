@@ -147,15 +147,14 @@ class MarketMaker {
         getline(stockFstream, line);
         Stock stock = stockFromFstream(line);
 
-        if (tradedOptionsFstream.is_open()) {
-            while (getline(tradedOptionsFstream, line)) {
-                Option option = optionFromFstream(line);
-                double price = priceOption(option, stock);
-                this->initOption(option, price - spread(price),
-                                 price + spread(price));
-            }
-            tradedOptionsFstream.close();
+        while (getline(tradedOptionsFstream, line)) {
+            Option option = optionFromFstream(line);
+            double price = priceOption(option, stock);
+            this->initOption(option, price - spread(price),
+                             price + spread(price));
         }
+
+        tradedOptionsFstream.close();
 
         this->tradedOptionsFstream.clear();
         this->tradedOptionsFstream.seekg(0);
@@ -217,6 +216,7 @@ class MarketMaker {
 
     void updatePrices(string time) {
         string line;
+
         getline(stockFstream, line);
         Stock stock = stockFromFstream(line);
 
