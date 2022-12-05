@@ -18,6 +18,6 @@ For simplicity, we make a few assumptions:
 - All contracts share the same expiry date
 - All contracts are options for the same underlying security
 
-PnL and unrealized PnL are determined at each timestep for pricing strategy evauation.
+PnL and unrealized PnL are calculated at each timestep.
 
 Tutorial coming soon.
