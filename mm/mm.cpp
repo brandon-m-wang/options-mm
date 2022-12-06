@@ -162,20 +162,6 @@ class MarketMaker {
         this->stockFstream.seekg(0);
     }
 
-    /* DEBUG */
-
-    void printOptions() {
-        for (auto &[option, metadata] : this->options) {
-            cout << option.strike << " " << option.callPut << endl;
-            cout << metadata["bid"] << " " << metadata["ask"] << " "
-                 << metadata["position"] << " " << metadata["long"] << " "
-                 << metadata["short"] << endl;
-        }
-        cout << "Trades: " << this->trades << endl;
-        cout << "PnL: " << this->pnl << endl;
-        cout << "Unrealized PnL: " << this->upnl << endl;
-    }
-
     /* TICK PROCESSING */
 
     void updatePnl(double lowAskPrice, double highBidPrice) {
@@ -225,7 +211,6 @@ class MarketMaker {
             this->setOptionBid(option, price - spread(price));
             this->setOptionAsk(option, price + spread(price));
         }
-        this->printOptions();
     }
 
     /* SECONDARY MUTATORS */
@@ -276,6 +261,64 @@ bool updatePriceSignal(string *prevTime, string time) {
     return true;
 }
 
+/* GUI */
+
+void printOptionChain(MarketMaker *mm) {
+    system("clear");
+    int col = 0;
+    int cols = 3;
+    cout << fixed << setprecision(2);
+    for (int i = 0; i < cols; i++) {
+        cout << setw(9) << left;
+        cout << "STRIKE";
+        cout << setw(3) << left;
+        cout << "T";
+        cout << setw(10) << left;
+        cout << "EXPIRY";
+        cout << setw(9) << left;
+        cout << "BID";
+        cout << setw(9) << left;
+        cout << "ASK";
+        cout << setw(9) << left;
+        cout << "POS";
+        cout << setw(11) << left;
+        cout << "LONG";
+        cout << setw(11) << left;
+        cout << "SHORT";
+    }
+    cout << endl << endl;
+    for (auto &[option, metadata] : mm->options) {
+        cout << setw(9) << left;
+        cout << option.strike;
+        cout << setw(3) << left;
+        cout << option.callPut;
+        cout << setw(10) << left;
+        cout << option.expirationDate;
+        cout << setw(9) << left;
+        cout << metadata["bid"];
+        cout << setw(9) << left;
+        cout << metadata["ask"];
+        cout << setw(9) << left;
+        cout << metadata["position"];
+        cout << setw(11) << left;
+        cout << metadata["long"];
+        cout << setw(11) << left;
+        cout << metadata["short"];
+        if ((col = ++col % cols) == 0) {
+            cout << endl;
+        }
+    }
+    cout << endl << endl;
+    cout << "TRADES: ";
+    cout << setw(12) << left;
+    cout << mm->trades;
+    cout << "PNL: ";
+    cout << setw(14) << left;
+    cout << mm->pnl;
+    cout << "UNREALIZED PNL: ";
+    cout << mm->upnl << endl;
+}
+
 /* RUN */
 
 int main() {
@@ -302,6 +345,7 @@ int main() {
 
         if (updatePriceSignal(&prevTime, tick[OptionTick::TimeBarStart])) {
             mm->updatePrices(tick[OptionTick::TimeBarStart]);
+            printOptionChain(mm);
         }
 
         mm->updatePosition(tick);
