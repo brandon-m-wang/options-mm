@@ -21,3 +21,5 @@ For simplicity, we make a few assumptions:
 PnL and unrealized PnL are calculated at each timestep.
 
 Tutorial coming soon.
+
+<img width="1080" alt="image" src="https://user-images.githubusercontent.com/70977266/205805823-52887536-f4db-431c-aa5f-19b893da0006.png">
