@@ -166,20 +166,24 @@ class MarketMaker {
 
     void updatePnl(double lowAskPrice, double highBidPrice) {
         this->upnl = 0;
+        double value = 0;
+        double diff = 0;
         for (auto &[option, metadata] : this->options) {
             if (metadata["position"] == 0) {
                 this->pnl += metadata["short"] - metadata["long"];
                 metadata["short"] = metadata["long"] = 0;
             } else {
+                diff += abs(metadata["short"] - metadata["long"]);
                 if (metadata["position"] > 0) {
-                    this->upnl += metadata["short"] - metadata["long"] +
-                                  (highBidPrice * metadata["position"]);
+                    value += metadata["short"] - metadata["long"] +
+                             (highBidPrice * metadata["position"]);
                 } else {
-                    this->upnl += metadata["short"] - metadata["long"] +
-                                  (lowAskPrice * metadata["position"]);
+                    value += metadata["short"] - metadata["long"] +
+                             (lowAskPrice * metadata["position"]);
                 }
             }
         }
+        this->upnl = value / (abs(value) + diff);
     }
 
     void updatePosition(vector<string> tick) {
@@ -316,7 +320,7 @@ void printOptionChain(MarketMaker *mm) {
     cout << setw(14) << left;
     cout << mm->pnl;
     cout << "UNREALIZED PNL: ";
-    cout << mm->upnl << endl;
+    cout << mm->upnl * 100 << "%" << endl;
 }
 
 /* RUN */
