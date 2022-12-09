@@ -341,9 +341,7 @@ int main() {
 
     int fd = open(orderbookPipe, O_RDONLY);
 
-    while (1) {
-
-        read(fd, buf, sizeof(buf));
+    while (read(fd, buf, sizeof(buf))) {
 
         tick = tickFromBuffer(buf);
 

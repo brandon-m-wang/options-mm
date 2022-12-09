@@ -32,7 +32,7 @@ int main() {
     int fd = open(myfifo, O_WRONLY);
 
     while (getline(optionsFstream, line)) {
-        this_thread::sleep_for(chrono::milliseconds(10));
+        this_thread::sleep_for(chrono::milliseconds(2));
 
         write(fd, line.c_str(), strlen(line.c_str()) + 1);
     }
