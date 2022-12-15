@@ -7,7 +7,7 @@ This is an exercise in:
 - Electronic market making techniques
 - Binomial options pricing
 
-This electronic options market maker makes a market around several options contracts at various strike prices derived from historical financial data. At each timestep granularity (1s), it provides two-sided quotes for each contract depending on the movement of the underlying stock. Quotes are provided through spread-setting and the Cox-Ross-Rubenstein options pricing model for American options via dynamic programming (binomial lattice).
+This electronic options market maker makes a market around several options contracts at various strike prices derived from historical financial data. At each timestep granularity (1s), it provides two-sided quotes for each contract depending on the movement of the underlying stock. Quotes are provided through spread-setting and the Cox-Ross-Rubinstein options pricing model for American options via dynamic programming (binomial lattice).
 
 For simplicity, we make a few assumptions:
 - Annualized volatility of the security is fixed
